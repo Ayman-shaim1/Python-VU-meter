@@ -1,4 +1,4 @@
-# Python Audio Decoder
+# Python Vu Meter (Audio Decoder)
 
 A simple real-time audio visualizer that displays a VU meter while playing an audio file.
 
