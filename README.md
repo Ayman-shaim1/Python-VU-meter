@@ -9,6 +9,7 @@ A real-time audio visualizer that displays a VU (Volume Unit) meter while playin
 - RMS (Root Mean Square) audio level calculation
 - Low-latency audio segment decoding via FFmpeg
 - Visual bar representation of audio levels (0-50 bars)
+- Configurable decode time for fine-tuning performance
 
 ## Requirements
 
@@ -20,6 +21,11 @@ A real-time audio visualizer that displays a VU (Volume Unit) meter while playin
 ### Python Dependencies
 - `numpy` - For audio data processing and RMS calculations
 - `python-vlc` - For audio playback control
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
 ## Installation
 
@@ -38,10 +44,12 @@ A real-time audio visualizer that displays a VU (Volume Unit) meter while playin
 4. **Configure FFmpeg path (if needed):**
    - If FFmpeg is not in your system PATH, update the `cmd` variable in `main.py` with the full path to your FFmpeg executable
    - Example: `cmd = "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe"`
+   - Or uncomment `cmd = "ffmpeg"` if FFmpeg is in your PATH
 
 5. **Prepare your audio file:**
    - Place your audio file named `track1.mp3` in the project directory
    - Or modify the `AUDIO_FILE` variable in `main.py` to point to your audio file
+   - Supported formats: MP3, WAV, and other formats supported by FFmpeg
 
 ## Usage
 
@@ -52,46 +60,83 @@ python main.py
 
 The script will:
 1. Start playing the audio file using VLC
-2. Display a real-time VU meter in the terminal showing audio levels
-3. Update the meter every 10ms (0.01 seconds) for smooth visualization
-4. Continue until the audio playback ends
+2. Wait 100ms for the audio to initialize
+3. Display a real-time VU meter in the terminal showing audio levels
+4. Update the meter every 20ms (0.02 seconds) - 50 updates per second
+5. Continue until the audio playback ends
 
 ### Example Output
 ```
 [██████████████████████████████████████████████████] 50
 ```
 
+The VU meter displays:
+- A bar graph using filled blocks (█) representing the audio level
+- A numeric value (0-50) showing the current level
+- Real-time updates as the audio plays
+
 ## How It Works
 
 1. **Audio Playback:** VLC media player handles the audio playback
-2. **Real-time Decoding:** FFmpeg decodes small audio segments (50ms) at the current playback position
+2. **Real-time Decoding:** FFmpeg decodes small audio segments (20ms) at the current playback position
 3. **RMS Calculation:** The decoded audio samples are converted to RMS values to measure audio levels
 4. **Visualization:** RMS values are scaled (divided by 300) and displayed as a bar graph (0-50 bars)
-5. **Continuous Loop:** The process repeats every 10ms while the audio is playing
+5. **Continuous Loop:** The process repeats every 20ms while the audio is playing
 
 ### Technical Details
 
 - **Audio Format:** Decoded as 16-bit signed little-endian PCM, mono channel, 44.1kHz sample rate
-- **RMS Scaling Factor:** 300 (optimized for 16-bit audio values ranging 0-32000)
-- **Update Rate:** 10ms intervals (100 updates per second) for smooth visualization
-- **Segment Duration:** 50ms audio segments for decoding
+- **RMS Scaling Factor:** 300 (optimized for 16-bit audio values ranging 0-32000 to create a readable VU meter with 0-50 bars)
+- **Update Rate:** 20ms intervals (50 updates per second)
+- **Segment Duration:** 20ms audio segments for decoding (configurable via `decode_time` variable)
 - **Initial Delay:** 100ms delay after starting playback to ensure audio is ready
 
 ## Configuration
 
-You can customize the following in `main.py`:
+You can customize the following variables in `main.py`:
 
 - `AUDIO_FILE`: Path to your audio file (default: `"track1.mp3"`)
+- `decode_time`: Duration for audio segment decoding and update interval in seconds (default: `0.02` = 20ms)
 - `cmd`: Path to FFmpeg executable (default: `"C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe"` for Windows)
-- `duration`: Audio segment duration in seconds for `decode_segment()` function (default: `0.01`)
-- Segment duration in main loop: Currently set to `0.05` seconds (line 67)
-- `time.sleep()`: Update interval in main loop (default: `0.01` seconds)
+  - Uncomment `cmd = "ffmpeg"` if FFmpeg is in your system PATH
+
+### Adjusting Performance
+
+- **Lower `decode_time`** (e.g., 0.01): More frequent updates, smoother visualization, higher CPU usage
+- **Higher `decode_time`** (e.g., 0.05): Less frequent updates, lower CPU usage, less smooth visualization
 
 ## Code Structure
 
-- `decode_segment(time_sec, duration)`: Decodes a small audio segment at the specified time position
+### Functions
+
+- `decode_segment(time_sec, duration)`: Decodes a small audio segment at the specified time position using FFmpeg
+  - Parameters:
+    - `time_sec`: Time position in seconds
+    - `duration`: Duration of the segment to decode (defaults to `decode_time`)
+  - Returns: NumPy array of 16-bit signed integer audio samples
+
 - `rms(block)`: Calculates the Root Mean Square value of audio samples
-- Main loop: Continuously monitors playback position and updates the VU meter display
+  - Parameters:
+    - `block`: NumPy array of audio samples
+  - Returns: RMS value as a float (0 if block is empty)
+
+### Main Loop
+
+The main loop:
+1. Checks if the player is still playing
+2. Gets the current playback position in seconds
+3. Decodes the audio segment at that position
+4. Calculates the RMS value
+5. Scales and clamps the level (0-50)
+6. Displays the VU meter
+7. Sleeps for `decode_time` seconds before the next iteration
+
+## Project Files
+
+- `main.py` - Main application script
+- `requirements.txt` - Python dependencies
+- `track1.mp3`, `track2.mp3`, `track3.wav` - Sample audio files
+- `workflow.png` - Workflow diagram (if available)
 
 ## Notes
 
@@ -99,7 +144,15 @@ You can customize the following in `main.py`:
 - The scaling factor of 300 is optimized for 16-bit audio samples (0 → 32000) to create a readable VU meter (0 → 50 bars)
 - Ensure FFmpeg is properly installed and accessible
 - The script requires the audio file to exist in the specified location
-- The visualization updates at 100 Hz (every 10ms) for smooth real-time display
+- The visualization updates at 50 Hz (every 20ms) for real-time display
+- The decode time and update interval are synchronized for optimal performance
+
+## Troubleshooting
+
+- **FFmpeg not found:** Make sure FFmpeg is installed and the path in `main.py` is correct
+- **No audio playback:** Check that the audio file exists and VLC is properly installed
+- **VU meter not updating:** Verify that the audio file is playing and FFmpeg can decode it
+- **Performance issues:** Try increasing `decode_time` to reduce CPU usage
 
 ## License
 
