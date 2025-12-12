@@ -7,13 +7,17 @@ AUDIO_FILE = "track1.mp3"
 
 player = vlc.MediaPlayer(AUDIO_FILE)
 player.play()
-time.sleep(0.3)
+time.sleep(0.1)
 
-def decode_segment(time_sec, duration=0.05):
+
+# cmd = "ffmpeg"
+cmd = "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe"
+
+def decode_segment(time_sec, duration=0.01):
     """Décoder un petit segment audio via FFmpeg."""
     process = subprocess.Popen(
         [
-            "ffmpeg",
+            cmd,
             "-ss", str(time_sec),
             "-t", str(duration),
             "-i", AUDIO_FILE,
@@ -36,11 +40,11 @@ def rms(block):
     return np.sqrt(np.mean(block.astype(np.float64)**2))
 
 
-
+#-----------------------------------------------------------------------------
 # On choisit 300 parce que c’est le meilleur
 # facteur pour transformer des valeurs RMS 16 bits (0 → 32000) 
 # en un VU-mètre lisible (0 → 50 barres).
-
+#-----------------------------------------------------------------------------
 
 # rms_max = 300 
 # block = decode_segment(22, duration=0.05)
@@ -67,4 +71,4 @@ while player.is_playing():
 
     bar = "█" * int(level)
     print(f"\r[{bar:<50}] {int(level)}", end="")
-    time.sleep(0.05)
+    time.sleep(0.01)
